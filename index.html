@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="//cdn.webix.com/edge/webix.css"
+      type="text/css"
+    />
+    <script src="//cdn.webix.com/edge/webix.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="css/index.css" type="text/css" />
+    <title>Вход</title>
+  </head>
+  <body>
+    <div id="form1"></div>
+    <script type="text/javascript" charset="utf-8">
+      let bear = '';
+      webix.ready(function () {
+        webix.ui({
+          container: 'form1',
+          view: 'form',
+          scroll: false,
+          id: 'form',
+          width: 300,
+          elements: [
+            { view: 'label', label: 'Авторизация', align: 'center' },
+            { view: 'text', name: 'login', label: 'Логин', required: true },
+            {
+              view: 'text',
+              name: 'password',
+              label: 'Пароль',
+              type: 'password',
+              required: true,
+            },
+            {
+              margin: 5,
+              cols: [
+                {
+                  view: 'button',
+                  label: 'Вход',
+                  css: 'webix_primary',
+                  click: loginClick,
+                  hotkey: 'enter',
+                },
+              ],
+            },
+          ],
+        });
+
+        function loginClick() {
+          this.getFormView().validate();
+          if (this.getFormView().validate()) {
+            var values = $$('form').getValues();
+            webix
+              .ajax()
+              .post('http://localhost:5001/api/account/signin', values, function () {
+                webix.message({
+                  type: 'success',
+                  text: 'Вход выполнен',
+                  expire: -1,
+                });
+              })
+              .then((token) => {
+                token = token.json();
+                localStorage.setItem('token', token.token);
+                window.location.href = 'photo.html';
+              })
+              .fail((response) => {
+                webix.message({ type: 'error', text: response.error.message });
+              });
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Изображения</title>
+    <script src="webix/webix/codebase/webix.js" type="text/javascript"></script>
+    <link
+      rel="stylesheet"
+      href="webix/webix/codebase/webix.css"
+      type="text/css"
+    />
+    <link
+      rel="stylesheet"
+      href="//cdn.webix.com/materialdesignicons/5.8.95/css/materialdesignicons.min.css"
+      type="text/css"
+      charset="utf-8"
+    />
+</head>
+<body>
+    <script type="text/javascript" charset="utf-8">
+         const Bearer = localStorage.getItem('token');
+
+         var grid = {
+        view: 'datatable',
+        id: 'data',
+        select: 'row',
+        blockselect: true,
+        multiselect: 'touch',
+        scrollAlignY: false,
+        scrollX: false,
+        css: 'webix_data_border webix_header_border',
+        resizeColumn: true, 
+        resizeRow: false,
+        columns: [
+          { id: 'id', header: '', width: 50, sort: 'int' },
+          {
+            id: 'url',
+            sort: 'text',
+            header: 'url',
+            width: 450,fillspace: true,
+            editor: 'text',
+          },
+          { id: 'lat', header: 'Широта', editor: 'text', sort: 'int' , width: 110,},
+          { id: 'lng', header: 'Долгота', editor: 'text', sort: 'int'  },
+          {
+            id: 'date',
+            header: 'Дата добавления',
+            //sort: 'int',
+            editor: 'text',
+            width: 150,
+            //format: webix.i18n.dateFormatDate,
+          },
+        ],
+        editaction: 'dblclick',
+        editable: false,
+        footer: false,
+        autoheight: false,
+        save: 'rest->http://localhost:5001/api/image',
+        url: {
+          $proxy: true,
+          load: function (view, params) {
+            return webix.ajax('http://localhost:5001/api/image/');
+          },
+        },
+      };
+      var find = {
+        margin: 0,
+        cols: [
+          {
+            view: 'text',
+            label: 'Поиск по:',
+            placeholder: 'Широте, долготе, дате создания',
+            id: 'filter-table',
+            width: 600,
+          },
+
+          {
+            view: 'button',
+            value: 'Удалить',
+            click: function () {
+              $$('data').remove($$('data').getSelectedId());
+            },
+          },
+        ],
+      };
+         webix.ready(function () {
+        webix.ui({
+          margin: 0,
+          rows: [
+            {
+              view: 'toolbar',
+              padding: 10,
+              elements: [
+                { view: 'label', label: 'Admin app' },
+                {},
+                {
+                  view: 'button',
+                  label: 'Комментарии',
+                  click: function () {
+                    window.location.href = 'comment.html';
+                  },
+                },
+                {
+                  view: 'button',
+                  label: 'Изображения',
+                  click: function () {
+                    window.location.href = 'photo.html';
+                  },
+                },
+                {
+                  view: 'button',
+                  label: 'Пользователи',
+                  click: function () {
+                    window.location.href = 'user.html';
+                  },
+                },
+                {
+                  view: 'button',
+                  label: 'Выход',
+                  click: function () {
+                    localStorage.setItem('token', '');
+                    window.location.href = 'index.html';
+                  },
+                },
+              ],
+            },
+            find,
+            grid,
+          ],
+        });
+        webix.attachEvent(
+          'onBeforeAjax',
+          function (mode, url, data, request, headers, files, promise) {
+            headers['Authorization'] = `Bearer ${localStorage.getItem(
+              'token'
+            )}`;
+          }
+        );
+        $$('filter-table').attachEvent('onTimedKeypress', function () {
+          var text = this.getValue().toString().toLowerCase();
+
+          $$('data').filter(function (obj) {
+            var filter = [obj.lat, obj.lng, obj.date].join('|');
+            filter = filter.toString().toLowerCase();
+            return filter.indexOf(text) != -1;
+          });
+        });
+      });
+    </script>
+</body>
+</html>

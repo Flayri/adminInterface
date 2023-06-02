@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="webix/webix/codebase/webix.js" type="text/javascript"></script>
+    <link
+      rel="stylesheet"
+      href="webix/webix/codebase/webix.css"
+      type="text/css"
+    />
+    <link
+      rel="stylesheet"
+      href="//cdn.webix.com/materialdesignicons/5.8.95/css/materialdesignicons.min.css"
+      type="text/css"
+      charset="utf-8"
+    />
+    <!-- <link
+      rel="stylesheet"
+      href="//cdn.webix.com/edge/webix.css"
+      type="text/css"
+    />
+    <script src="//cdn.webix.com/edge/webix.js" type="text/javascript"></script> -->
+    <title>Комментарии</title>
+  </head>
+  <body>
+    <script type="text/javascript" charset="utf-8">
+      const Bearer = localStorage.getItem('token');
+      webix.i18n.setLocale('ru-RU');
+      var find = {
+        margin: 0,
+        cols: [
+          {
+            view: 'text',
+            label: 'Поиск по:',
+            placeholder: 'Тексту сообщения, дате создания, Id изображения',
+            id: 'filter-table',
+            width: 600,
+          },
+
+          {
+            view: 'button',
+            value: 'Удалить',
+            click: function () {
+              $$('data').remove($$('data').getSelectedId());
+            },
+          },
+        ],
+      };
+      webix.DataDriver.json = webix.extend(
+        {
+          // включаю функцию парсинга даты
+          parseDates: true,
+          toObject: function (data) {
+            if (!data) return null;
+            if (typeof data == 'string') {
+              try {
+                if (this.parseDates) {
+                  var isodate = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(.\d{3})?Z/;
+                  data = JSON.parse(data, function (key, value) {
+                    if (typeof value == 'string') {
+                      if (isodate.test(value)) return new Date(value);
+                    }
+                    return value;
+                  });
+                } else {
+                  data = JSON.parse(data);
+                }
+              } catch (e) {
+                webix.log(e);
+                webix.log(data);
+                webix.assert_error('Invalid JSON data for parsing');
+                return null;
+              }
+            }
+
+            return data;
+          },
+        },
+        webix.DataDriver.json
+      );
+      var grid = {
+        view: 'treetable',
+        id: 'data',
+        select: 'row',
+        blockselect: true,
+        multiselect: false,
+        // scrollX: false,
+        css: 'webix_data_border webix_header_border',
+        resizeColumn: true,
+        resizeRow: false,
+        columns: [
+          //{ id: 'id', header: '', width: 60, sort: 'int' },
+          {
+            id: 'imagesId',
+            header: 'Id Изображения',
+            width: 200,
+            editor: 'text',
+            //footer: { text: 'Всего:', colspan: 3 },
+            template: function (obj, common) {
+              if (obj.$level == 1)
+                return common.treetable(obj, common) + obj.value;
+              console.log(obj);
+              return obj.imagesId;
+            },
+          },
+          {
+            id: 'id',
+            header: 'Id комментария',
+            sort: 'int',
+            editor: 'text',
+            width: 150,
+          },
+          {
+            id: 'text',
+            header: 'Текст сообщения',
+            editor: 'text',
+            fillspace: true,
+          },
+          {
+            id: 'createdAt',
+            header: 'Дата создания',
+            editor: 'text',
+            fillspace: true,
+            format: webix.i18n.fullDateFormatStr,
+          },
+        ],
+        editaction: 'dblclick',
+        editable: false,
+        footer: true,
+        autoheight: false,
+        scheme: {
+          $group: 'imagesId',
+          //$sort:{ by:"productid", dir:"desc" }
+        },
+        ready: function () {
+          console.log(this);
+          this.open(this.getFirstId());
+        },
+        // height: 540,
+        // scrollAlignY:false,
+        scroll: 'auto',
+        save: 'rest->http://localhost:5001/api/image/1/comment/',
+        url: {
+          $proxy: true,
+          load: function (view, params) {
+            return webix.ajax(
+              'http://localhost:5001/api/image/comment/all/admin'
+            );
+          },
+        },
+      };
+      webix.ready(function () {
+        webix.ui({
+          margin: 0,
+          rows: [
+            {
+              view: 'toolbar',
+              padding: 10,
+              elements: [
+                { view: 'label', label: 'Admin app' },
+                {},
+                {
+                  view: 'button',
+                  label: 'Комментарии',
+                  click: function () {
+                    window.location.href = 'comment.html';
+                  },
+                },
+                {
+                  view: 'button',
+                  label: 'Изображения',
+                  click: function () {
+                    window.location.href = 'photo.html';
+                  },
+                },
+                {
+                  view: 'button',
+                  label: 'Пользователи',
+                  click: function () {
+                    window.location.href = 'user.html';
+                  },
+                },
+                {
+                  view: 'button',
+                  label: 'Выход',
+                  click: function () {
+                    localStorage.setItem('token', '');
+                    window.location.href = 'index.html';
+                  },
+                },
+              ],
+            },
+            find,
+            grid,
+            // form,
+          ],
+        });
+        webix.attachEvent(
+          'onBeforeAjax',
+          function (mode, url, data, request, headers, files, promise) {
+            headers['Authorization'] = `Bearer ${localStorage.getItem(
+              'token'
+            )}`;
+          }
+        );
+        $$('filter-table').attachEvent('onTimedKeypress', function () {
+          var text = this.getValue().toString().toLowerCase();
+
+          $$('data').filter(function (obj) {
+            var filter = [obj.imagesId, obj.text, obj.createdAt].join('|');
+            filter = filter.toString().toLowerCase();
+            return filter.indexOf(text) != -1;
+          });
+        });
+
+      });
+    </script>
+  </body>
+</html>
